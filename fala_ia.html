@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assistente Gemini com Voz Nativa</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        html, body {
+            scroll-behavior: smooth;
+        }
+        body {
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #1a202c; /* Default Dark background */
+            color: #e2e8f0; /* Default Light text */
+            position: relative;
+            overflow-x: hidden;
+            padding-bottom: 50px;
+            transition: background-color 0.3s ease, color 0.3s ease; /* Smooth transition for theme change */
+        }
+
+        /* Light Mode styles */
+        body.light-mode {
+            background-color: #f0f2f5; /* Light background */
+            color: #333; /* Dark text */
+        }
+
+        #microphoneVisualsContainer {
+            position: relative;
+            width: 180px;
+            height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 40px;
+            z-index: 10;
+        }
+
+        #mainMicrophoneCircle {
+            width: 150px;
+            height: 150px;
+            background-color: #60a5fa; /* Default Blue */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px rgba(96, 165, 250, 0.6);
+            cursor: pointer;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.3s ease;
+            position: relative;
+            z-index: 10;
+        }
+        #mainMicrophoneCircle:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(96, 165, 250, 0.8);
+        }
+        #mainMicrophoneCircle i {
+            font-size: 60px;
+            color: white;
+            z-index: 12;
+        }
+        #mainMicrophoneCircle.recording {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 20px rgba(96, 165, 250, 0.6); }
+            50% { box-shadow: 0 0 40px rgba(96, 165, 250, 1); }
+            100% { box-shadow: 0 0 20px rgba(96, 165, 250, 0.6); }
+        }
+
+        /* Light Mode for Microphone Circle */
+        body.light-mode #mainMicrophoneCircle {
+            background-color: #4299e1; /* Lighter blue */
+            box-shadow: 0 0 20px rgba(66, 153, 225, 0.6);
+        }
+        body.light-mode #mainMicrophoneCircle:hover {
+            box-shadow: 0 0 30px rgba(66, 153, 225, 0.8);
+        }
+        body.light-mode #mainMicrophoneCircle.recording {
+            animation: pulse-light 1.5s infinite;
+        }
+        @keyframes pulse-light {
+            0% { box-shadow: 0 0 20px rgba(66, 153, 225, 0.6); }
+            50% { box-shadow: 0 0 40px rgba(66, 153, 225, 1); }
+            100% { box-shadow: 0 0 20px rgba(66, 153, 225, 0.6); }
+        }
+
+        .action-buttons-container {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 40px;
+            z-index: 10;
+        }
+
+        .action-button {
+            padding: 12px 25px;
+            border: 1px solid #60a5fa; /* Default Blue border */
+            border-radius: 25px;
+            background-color: transparent;
+            color: #e2e8f0; /* Default Light text */
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 0 10px rgba(96, 165, 250, 0.3);
+            transition: all 0.2s ease-in-out, background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+            font-weight: normal;
+            text-decoration: none; /* For anchor tags */
+        }
+        .action-button:hover:not(:disabled) {
+            background-color: rgba(96, 165, 250, 0.1);
+            box-shadow: 0 0 15px rgba(96, 165, 250, 0.5);
+            transform: translateY(-2px);
+        }
+        .action-button:disabled {
+            border-color: #4a5568;
+            color: #a0aec0;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+            background-color: transparent;
+        }
+
+        /* Light Mode for Action Buttons */
+        body.light-mode .action-button {
+            border: 1px solid #4299e1; /* Lighter blue border */
+            color: #333; /* Dark text */
+            box-shadow: 0 0 10px rgba(66, 153, 225, 0.3);
+        }
+        body.light-mode .action-button:hover:not(:disabled) {
+            background-color: rgba(66, 153, 225, 0.1);
+            box-shadow: 0 0 15px rgba(66, 153, 225, 0.5);
+        }
+        body.light-mode .action-button:disabled {
+            border-color: #a0aec0;
+            color: #718096;
+        }
+
+        textarea {
+            width: 90%;
+            max-width: 500px;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #60a5fa; /* Default Blue border */
+            border-radius: 8px;
+            box-sizing: border-box;
+            resize: vertical;
+            min-height: 120px;
+            font-size: 16px;
+            background-color: #2d3748; /* Default Darker background */
+            color: #e2e8f0; /* Default Light text */
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+            transition: border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+            z-index: 10;
+        }
+        textarea:focus {
+            border-color: #4299e1;
+            outline: none;
+        }
+
+        /* Light Mode for Textarea */
+        body.light-mode textarea {
+            border: 1px solid #4299e1; /* Lighter blue border */
+            background-color: #ffffff; /* White background */
+            color: #333; /* Dark text */
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        body.light-mode textarea:focus {
+            border-color: #3182ce;
+        }
+
+        #mensagem {
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            border-radius: 20px;
+            background-color: rgba(96, 165, 250, 0.2); /* Default Blueish background */
+            color: #e2e8f0; /* Default Light text */
+            font-weight: normal;
+            font-size: 16px;
+            text-align: center;
+            width: fit-content;
+            max-width: 80%;
+            margin-left: auto;
+            margin-right: auto;
+            box-shadow: 0 0 8px rgba(96, 165, 250, 0.2);
+            z-index: 10;
+            transition: all 0.3s ease;
+        }
+
+        .sucesso { background-color: rgba(76, 175, 80, 0.2); color: #a5d6a7; }
+        .erro { background-color: rgba(244, 67, 54, 0.2); color: #ef9a9a; }
+        .alerta { background-color: rgba(255, 193, 7, 0.2); color: #ffe082; }
+        .processando { background-color: rgba(3, 169, 244, 0.2); color: #81d4fa; }
+
+        /* Light Mode for Messages */
+        body.light-mode #mensagem {
+            background-color: rgba(66, 153, 225, 0.2);
+            color: #333;
+            box-shadow: 0 0 8px rgba(66, 153, 225, 0.2);
+        }
+        body.light-mode .sucesso { background-color: rgba(76, 175, 80, 0.2); color: #388e3c; }
+        body.light-mode .erro { background-color: rgba(244, 67, 54, 0.2); color: #d32f2f; }
+        body.light-mode .alerta { background-color: rgba(255, 193, 7, 0.2); color: #fbc02d; }
+        body.light-mode .processando { background-color: rgba(3, 169, 244, 0.2); color: #0288d1; }
+
+        #progressBar {
+            width: 300px;
+            height: 8px;
+            background-color: #4a5568; /* Default Dark gray */
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: none;
+            z-index: 10;
+        }
+        #progressBar.active {
+            display: block;
+            animation: loading 1.5s infinite linear;
+            background: linear-gradient(90deg, #4a5568 0%, #60a5fa 50%, #4a5568 100%);
+            background-size: 200% 100%;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Light Mode for Progress Bar */
+        body.light-mode #progressBar {
+            background-color: #a0aec0;
+        }
+        body.light-mode #progressBar.active {
+            background: linear-gradient(90deg, #a0aec0 0%, #4299e1 50%, #a0aec0 100%);
+        }
+
+        /* Waveform Visualizer (ondas em volta do microfone) */
+        #waveCircle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 150px;
+            height: 150px;
+            background-color: transparent;
+            border-radius: 50%;
+            opacity: 0;
+            display: none;
+            z-index: 9;
+            pointer-events: none;
+            border: 2px solid rgba(96, 165, 250, 0.7); /* Default Blue border */
+        }
+
+        #waveCircle.active {
+            display: block;
+            animation: wave 2s infinite cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        @keyframes wave {
+            0% {
+                transform: translate(-50%, -50%) scale(0.1);
+                opacity: 0.9;
+                border-width: 2px;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.5);
+                opacity: 0.5;
+                border-width: 1px;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(2);
+                opacity: 0;
+                border-width: 0px;
+            }
+        }
+
+        /* Light Mode for Wave Circle */
+        body.light-mode #waveCircle {
+            border: 2px solid rgba(66, 153, 225, 0.7);
+        }
+
+        #aiResponseDisplay {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out, color 0.3s ease;
+            max-width: 500px;
+            width: 90%;
+            padding: 0;
+            background-color: transparent;
+            border-radius: 0;
+            margin-top: 20px;
+            box-shadow: none;
+            color: #e2e8f0; /* Default Light text */
+            font-size: 1.1em;
+            line-height: 1.6;
+            text-align: left;
+            min-height: 0;
+            display: block;
+            z-index: 10;
+            visibility: hidden;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        #aiResponseDisplay.show {
+            opacity: 1;
+            transform: translateY(0);
+            visibility: visible;
+        }
+
+        /* Light Mode for AI Response Display */
+        body.light-mode #aiResponseDisplay {
+            color: #333; /* Dark text */
+        }
+
+        /* Radial Equalizer (posicionado dentro do microfone) */
+        #equalizer {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            height: 30px;
+            width: 80px;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            pointer-events: none;
+            z-index: 11;
+        }
+
+        #equalizer.active {
+            opacity: 1;
+        }
+
+        .bar {
+            width: 8px;
+            height: 5px;
+            background-color: #e2e8f0; /* Default Light color for bars */
+            margin: 0 2px;
+            border-radius: 2px;
+            transform-origin: bottom;
+            transition: height 0.05s ease-out, background-color 0.3s ease;
+        }
+
+        /* Animation for AI speaking */
+        #equalizer.speaking-animation .bar:nth-child(1) { animation: equalize 0.8s -0.2s infinite alternate; }
+        #equalizer.speaking-animation .bar:nth-child(2) { animation: equalize 0.8s -0.4s infinite alternate; }
+        #equalizer.speaking-animation .bar:nth-child(3) { animation: equalize 0.8s -0.6s infinite alternate; }
+        #equalizer.speaking-animation .bar:nth-child(4) { animation: equalize 0.8s -0.8s infinite alternate; }
+        #equalizer.speaking-animation .bar:nth-child(5) { animation: equalize 0.8s -1.0s infinite alternate; }
+
+        @keyframes equalize {
+            0% { height: 5px; background-color: #e2e8f0; }
+            25% { height: 20px; background-color: #90cdf4; }
+            50% { height: 40px; background-color: #60a5fa; }
+            75% { height: 15px; background-color: #90cdf4; }
+            100% { height: 5px; background-color: #e2e8f0; }
+        }
+
+        /* Light Mode for Equalizer */
+        body.light-mode #equalizer .bar {
+            background-color: #333; /* Dark color for bars */
+        }
+        body.light-mode #equalizer.speaking-animation .bar:nth-child(1) { animation: equalize-light 0.8s -0.2s infinite alternate; }
+        body.light-mode #equalizer.speaking-animation .bar:nth-child(2) { animation: equalize-light 0.8s -0.4s infinite alternate; }
+        body.light-mode #equalizer.speaking-animation .bar:nth-child(3) { animation: equalize-light 0.8s -0.6s infinite alternate; }
+        body.light-mode #equalizer.speaking-animation .bar:nth-child(4) { animation: equalize-light 0.8s -0.8s infinite alternate; }
+        body.light-mode #equalizer.speaking-animation .bar:nth-child(5) { animation: equalize-light 0.8s -1.0s infinite alternate; }
+
+        @keyframes equalize-light {
+            0% { height: 5px; background-color: #333; }
+            25% { height: 20px; background-color: #63b3ed; }
+            50% { height: 40px; background-color: #4299e1; }
+            75% { height: 15px; background-color: #63b3ed; }
+            100% { height: 5px; background-color: #333; }
+        }
+
+        /* Settings Button */
+        #settingsButton {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            font-size: 18px;
+            z-index: 100;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: #2d3748; /* Default Darker background */
+            margin: auto;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 90%;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            color: #e2e8f0; /* Default Light text */
+            transition: all 0.3s ease;
+        }
+
+        .modal-content h2 {
+            margin-top: 0;
+            color: #60a5fa; /* Default Blue */
+            text-align: center;
+            font-size: 1.8em;
+            transition: color 0.3s ease;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 5px;
+            color: #a0aec0; /* Default Gray */
+            font-size: 1.1em;
+            transition: color 0.3s ease;
+        }
+
+        .modal-content select,
+        .modal-content textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #4a5568; /* Default Dark gray border */
+            border-radius: 5px;
+            background-color: #1a202c; /* Default Dark background */
+            color: #e2e8f0; /* Default Light text */
+            font-size: 1em;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+
+        .modal-content select:focus,
+        .modal-content textarea:focus {
+            border-color: #60a5fa;
+            outline: none;
+        }
+
+        .modal-content textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .modal-content .action-button {
+            width: fit-content;
+            align-self: flex-end;
+            margin-top: 10px;
+        }
+        .modal-content .action-button:first-of-type {
+            margin-right: 10px;
+        }
+        .modal-content .button-group {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        #clearHistoryButton {
+            background-color: rgba(244, 67, 54, 0.2);
+            border-color: #f44336;
+            color: #ef9a9a;
+        }
+        #clearHistoryButton:hover:not(:disabled) {
+            background-color: rgba(244, 67, 54, 0.3);
+            box-shadow: 0 0 15px rgba(244, 67, 54, 0.5);
+        }
+
+        /* Light Mode for Modal */
+        body.light-mode .modal-content {
+            background-color: #ffffff; /* White background */
+            color: #333; /* Dark text */
+        }
+        body.light-mode .modal-content h2 {
+            color: #4299e1; /* Lighter blue */
+        }
+        body.light-mode .modal-content h3 {
+            color: #718096; /* Darker gray */
+        }
+        body.light-mode .modal-content select,
+        body.light-mode .modal-content textarea {
+            border: 1px solid #a0aec0; /* Light gray border */
+            background-color: #f0f2f5; /* Light background */
+            color: #333; /* Dark text */
+        }
+        body.light-mode .modal-content select:focus,
+        body.light-mode .modal-content textarea:focus {
+            border-color: #4299e1;
+        }
+        body.light-mode #clearHistoryButton {
+            background-color: rgba(244, 67, 54, 0.1);
+            border-color: #f44336;
+            color: #d32f2f;
+        }
+        body.light-mode #clearHistoryButton:hover:not(:disabled) {
+            background-color: rgba(244, 67, 54, 0.2);
+            box-shadow: 0 0 15px rgba(244, 67, 54, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="mensagem">Aperte No Microfone Para conversar Por voz com a IA, ou clique em "texto" para conversar com texto com a IA respondendo por voz!.</div>
+    <div id="progressBar"></div>
+
+    <div id="microphoneVisualsContainer">
+        <div id="waveCircle"></div>
+        <div id="mainMicrophoneCircle">
+            <i class="fas fa-microphone"></i>
+            <div id="equalizer">
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-buttons-container">
+        <a href="chatbot.html" class="action-button">
+            <i class="fas fa-comments"></i> Voltar ao Chat
+        </a>
+        <button id="botaoAlternarTexto" class="action-button">
+            <i class="fas fa-pencil-alt"></i> Texto
+        </button>
+        <button id="darkModeToggle" class="action-button">
+            <i class="fas fa-sun"></i> Light Mode
+        </button>
+    </div>
+
+    <div id="aiResponseDisplay"></div>
+
+    <textarea id="textoUsuario" placeholder="Digite sua pergunta ou clique no microfone." style="display: none;"></textarea>
+    <button id="botaoEnviarTexto" class="action-button" style="display: none;">
+        <i class="fas fa-paper-plane"></i> Enviar Pergunta
+    </button>
+    <button id="botaoFalar" class="action-button" style="display: none;">
+        <i class="fas fa-volume-up"></i> Fazer a IA Falar Resposta
+    </button>
+
+    <button id="settingsButton" class="action-button">
+        <i class="fas fa-cog"></i>
+    </button>
+
+    <div id="settingsModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Configurações da IA</h2>
+            <h3>Voz da IA:</h3>
+            <select id="voiceSelect"></select>
+            <h3>Personalidades Prontas:</h3>
+            <select id="predefinedPersonalitySelect">
+                <option value="">Nenhuma (usar personalizada abaixo)</option>
+                <option value="autodev">AutoDev (Assistente de Código Amigável)</option>
+                <option value="amigavel">Amigável e Prestativo</option>
+                <option value="formal">Formal e Objetivo</option>
+                <option value="criativo">Criativo e Inspirador</option>
+            </select>
+            <h3>Personalidade Personalizada:</h3>
+            <textarea id="personalityInput" placeholder="Ex: 'Você é um assistente prestativo e amigável.'"></textarea>
+            <div class="button-group">
+                <button id="clearHistoryButton" class="action-button">
+                    <i class="fas fa-trash-alt"></i> Limpar Histórico
+                </button>
+                <button id="saveSettingsButton" class="action-button">Salvar</button>
+                <button id="closeSettingsButton" class="action-button">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GEMINI_API_KEYS = [
+            "AIzaSyAZz260hoN2yCcfwWilZStmo-LJtUPLkCQ",
+            "AIzaSyBR39tMzH4jovVlB20RzeEURE53t4yW5rg",
+            "AIzaSyAGb5_zsUM25QErMInuR9K56ub8deb3kn0",
+            "AIzaSyCAmdF00HCTFQSUCZ9CYVFwpWCIhfUqf0U",
+            "AIzaSyCYf-JnVxVQmPoRBomn8CTWxShQYjoZDcw",
+            "AIzaSyAoNuQ6CAociVuw2HyBmclZFFIBppIdIHY",
+            "AIzaSyANKbEHjIHXe7uX9W_VnV_zQ5NGRIxa3HI",
+            "AIzaSyDD3xzLu9Fk-AJIVyw8Ama89rDx8_k2rN0"
+        ];
+
+        const synth = window.speechSynthesis;
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        const mainMicrophoneCircle = document.getElementById('mainMicrophoneCircle');
+        const botaoAlternarTexto = document.getElementById('botaoAlternarTexto');
+        const textarea = document.getElementById('textoUsuario');
+        const botaoEnviarTexto = document.getElementById('botaoEnviarTexto');
+        const botaoFalar = document.getElementById('botaoFalar');
+        const divMensagem = document.getElementById('mensagem');
+        const waveCircle = document.getElementById('waveCircle');
+        const progressBar = document.getElementById('progressBar');
+        const aiResponseDisplay = document.getElementById('aiResponseDisplay');
+        const equalizer = document.getElementById('equalizer');
+        const settingsButton = document.getElementById('settingsButton');
+        const settingsModal = document.getElementById('settingsModal');
+        const voiceSelect = document.getElementById('voiceSelect');
+        const personalityInput = document.getElementById('personalityInput');
+        const predefinedPersonalitySelect = document.getElementById('predefinedPersonalitySelect');
+        const saveSettingsButton = document.getElementById('saveSettingsButton');
+        const closeSettingsButton = document.getElementById('closeSettingsButton');
+        const clearHistoryButton = document.getElementById('clearHistoryButton');
+        const darkModeToggle = document.getElementById('darkModeToggle');
+
+        let recognition = null;
+        let isRecording = false;
+        let isTextMode = false;
+        let lastAIResponseText = '';
+
+        let audioContext = null;
+        let analyser = null;
+        let microphoneStreamSource = null;
+        let dataArray = null;
+        let visualizerBars = [];
+        let animationFrameId = null;
+        let mediaStream = null;
+
+        let selectedVoiceURI = localStorage.getItem('aiVoiceURI') || '';
+        let aiPersonality = '';
+
+        const DEFAULT_AI_PERSONALITY_PROMPT = "Você é o AutoDev, um assistente de código amigável e prestativo. Sua função é ajudar com códigos, explicar conceitos e dar sugestões de forma clara, concisa e humana, sem formalidades excessivas. Responda sempre em Português do Brasil.";
+
+        const predefinedPersonalities = {
+            'autodev': DEFAULT_AI_PERSONALITY_PROMPT,
+            'amigavel': "Você é um assistente amigável e prestativo. Responda de forma calorosa e encorajadora, sempre em Português do Brasil.",
+            'formal': "Você é um assistente formal e objetivo. Responda de forma direta e profissional, sempre em Português do Brasil.",
+            'criativo': "Você é um assistente criativo e inspirador. Responda com ideias inovadoras e perspectivas únicas, sempre em Português do Brasil."
+        };
+
+        let availableVoices = [];
+
+        // Histórico de conversas para contexto
+        let conversationHistory = [];
+        const CONVERSATION_HISTORY_KEY = 'geminiConversationHistory';
+
+        function loadConversationHistory() {
+            const savedHistory = localStorage.getItem(CONVERSATION_HISTORY_KEY);
+            if (savedHistory) {
+                try {
+                    conversationHistory = JSON.parse(savedHistory);
+                } catch (e) {
+                    console.error("Erro ao carregar histórico de conversas:", e);
+                    conversationHistory = [];
+                }
+            } else {
+                conversationHistory = [];
+            }
+        }
+
+        function saveConversationHistory() {
+            localStorage.setItem(CONVERSATION_HISTORY_KEY, JSON.stringify(conversationHistory));
+        }
+
+        function clearConversationHistory() {
+            conversationHistory = [];
+            saveConversationHistory();
+            mostrarMensagem('sucesso', '✅ Histórico de conversas limpo!');
+            aiResponseDisplay.classList.remove('show');
+            aiResponseDisplay.textContent = '';
+            closeSettingsModal();
+        }
+
+        function mostrarMensagem(tipo, texto) {
+            divMensagem.className = tipo;
+            divMensagem.textContent = texto;
+            if (tipo === 'processando') {
+                progressBar.classList.add('active');
+            } else {
+                progressBar.classList.remove('active');
+            }
+        }
+
+        function desabilitarBotoes(desabilitar) {
+            mainMicrophoneCircle.style.pointerEvents = desabilitar ? 'none' : 'auto';
+            mainMicrophoneCircle.style.opacity = desabilitar ? '0.5' : '1';
+            botaoAlternarTexto.disabled = desabilitar;
+            botaoEnviarTexto.disabled = desabilitar;
+            settingsButton.disabled = desabilitar;
+            darkModeToggle.disabled = desabilitar;
+        }
+
+        function initAudioVisualizer() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (!analyser) {
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                analyser.smoothingTimeConstant = 0.8;
+            }
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+            visualizerBars = document.querySelectorAll('#equalizer .bar');
+        }
+
+        async function startMicrophoneVisualizer() {
+            initAudioVisualizer();
+            if (audioContext.state === 'suspended') {
+                await audioContext.resume();
+            }
+            try {
+                mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                microphoneStreamSource = audioContext.createMediaStreamSource(mediaStream);
+                microphoneStreamSource.connect(analyser);
+
+                equalizer.classList.add('active');
+                equalizer.classList.remove('speaking-animation');
+                drawMicrophoneVisualizer();
+            } catch (err) {
+                console.error('Erro ao acessar o microfone para visualização:', err);
+                mostrarMensagem('erro', '❌ Erro ao acessar o microfone para visualização. Verifique as permissões do microfone.');
+                stopMicrophoneVisualizer();
+            }
+        }
+
+        function drawMicrophoneVisualizer() {
+            animationFrameId = requestAnimationFrame(drawMicrophoneVisualizer);
+            analyser.getByteFrequencyData(dataArray);
+
+            const barWidth = analyser.frequencyBinCount / visualizerBars.length;
+
+            for (let i = 0; i < visualizerBars.length; i++) {
+                let sum = 0;
+                const start = Math.floor(i * barWidth);
+                const end = Math.min(start + barWidth, analyser.frequencyBinCount);
+                for (let j = start; j < end; j++) {
+                    sum += dataArray[j];
+                }
+                const average = sum / (end - start);
+                const barHeight = Math.max(5, average / 255 * 45 + 5);
+                visualizerBars[i].style.height = `${barHeight}px`;
+            }
+        }
+
+        function stopMicrophoneVisualizer() {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+            if (microphoneStreamSource) {
+                microphoneStreamSource.disconnect();
+                microphoneStreamSource = null;
+            }
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+            }
+            if (analyser) {
+                analyser.disconnect();
+            }
+            equalizer.classList.remove('active');
+            visualizerBars.forEach(bar => bar.style.height = '5px');
+        }
+
+        function populateVoiceList() {
+            availableVoices = synth.getVoices().filter(voice => voice.lang.startsWith('pt-BR'));
+            voiceSelect.innerHTML = '';
+
+            if (availableVoices.length === 0) {
+                const option = document.createElement('option');
+                option.textContent = 'Nenhuma voz PT-BR disponível';
+                option.value = '';
+                voiceSelect.appendChild(option);
+                voiceSelect.disabled = true;
+                return;
+            }
+
+            availableVoices.forEach(voice => {
+                const option = document.createElement('option');
+                option.textContent = `${voice.name} (${voice.lang})`;
+                option.value = voice.voiceURI;
+                option.selected = (voice.voiceURI === selectedVoiceURI);
+                voiceSelect.appendChild(option);
+            });
+
+            if (!selectedVoiceURI || !availableVoices.some(v => v.voiceURI === selectedVoiceURI)) {
+                if (availableVoices.length > 0) {
+                    selectedVoiceURI = availableVoices[0].voiceURI;
+                    voiceSelect.value = selectedVoiceURI;
+                    localStorage.setItem('aiVoiceURI', selectedVoiceURI);
+                }
+            }
+        }
+
+        function getEffectivePersonality() {
+            const selectedPredefinedKey = predefinedPersonalitySelect.value;
+            const customPersonalityText = personalityInput.value.trim();
+
+            if (selectedPredefinedKey && predefinedPersonalities[selectedPredefinedKey]) {
+                return predefinedPersonalities[selectedPredefinedKey];
+            } else if (customPersonalityText) {
+                return customPersonalityText;
+            }
+            return DEFAULT_AI_PERSONALITY_PROMPT;
+        }
+
+        function loadSettings() {
+            selectedVoiceURI = localStorage.getItem('aiVoiceURI') || '';
+            let savedPersonalityKey = localStorage.getItem('aiPersonalityKey') || '';
+            let savedCustomPersonality = localStorage.getItem('aiCustomPersonality') || '';
+
+            predefinedPersonalitySelect.innerHTML = '';
+            const defaultOption = document.createElement('option');
+            defaultOption.textContent = 'Nenhuma (usar personalizada abaixo)';
+            defaultOption.value = '';
+            predefinedPersonalitySelect.appendChild(defaultOption);
+
+            for (const key in predefinedPersonalities) {
+                const option = document.createElement('option');
+                option.textContent = key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1') + (key === 'autodev' ? ' (Padrão)' : '');
+                option.value = key;
+                predefinedPersonalitySelect.appendChild(option);
+            }
+
+            if (savedPersonalityKey && predefinedPersonalities[savedPersonalityKey]) {
+                predefinedPersonalitySelect.value = savedPersonalityKey;
+                personalityInput.value = '';
+                personalityInput.disabled = true;
+            } else if (savedCustomPersonality) {
+                predefinedPersonalitySelect.value = '';
+                personalityInput.value = savedCustomPersonality;
+                personalityInput.disabled = false;
+            } else {
+                predefinedPersonalitySelect.value = 'autodev';
+                personalityInput.value = '';
+                personalityInput.disabled = true;
+            }
+
+            personalityInput.placeholder = "Ex: 'Você é um assistente prestativo e amigável.'";
+
+            aiPersonality = getEffectivePersonality();
+        }
+
+        function saveSettings() {
+            selectedVoiceURI = voiceSelect.value;
+            localStorage.setItem('aiVoiceURI', selectedVoiceURI);
+
+            const selectedPredefinedKey = predefinedPersonalitySelect.value;
+            const customPersonalityText = personalityInput.value.trim();
+
+            if (selectedPredefinedKey) {
+                localStorage.setItem('aiPersonalityKey', selectedPredefinedKey);
+                localStorage.removeItem('aiCustomPersonality');
+            } else if (customPersonalityText) {
+                localStorage.setItem('aiCustomPersonality', customPersonalityText);
+                localStorage.removeItem('aiPersonalityKey');
+            } else {
+                localStorage.setItem('aiPersonalityKey', 'autodev');
+                localStorage.removeItem('aiCustomPersonality');
+            }
+
+            aiPersonality = getEffectivePersonality();
+            mostrarMensagem('sucesso', '✅ Configurações salvas com sucesso!');
+            closeSettingsModal();
+        }
+
+        function openSettingsModal() {
+            settingsModal.style.display = 'flex';
+            loadSettings();
+            populateVoiceList();
+        }
+
+        function closeSettingsModal() {
+            settingsModal.style.display = 'none';
+        }
+
+        async function obterRespostaDaIA(pergunta) {
+            if (!GEMINI_API_KEYS || GEMINI_API_KEYS.length === 0 || GEMINI_API_KEYS.every(key => key.trim() === "")) {
+                mostrarMensagem('erro', '❌ Por favor, configure as variáveis GEMINI_API_KEYS no código!');
+                return;
+            }
+
+            mostrarMensagem('processando', '🧠 IA Gemini pensando... Aguarde.');
+            desabilitarBotoes(true);
+            botaoFalar.style.display = 'none';
+            aiResponseDisplay.classList.remove('show');
+            aiResponseDisplay.textContent = '';
+            stopMicrophoneVisualizer();
+
+            conversationHistory.push({
+                role: "user",
+                parts: [{ text: pergunta }]
+            });
+            saveConversationHistory();
+
+            let successfulResponse = false;
+            let lastError = null;
+
+            for (const apiKey of GEMINI_API_KEYS) {
+                if (apiKey.trim() === "") {
+                    console.warn("Chave API vazia, pulando para a próxima.");
+                    continue;
+                }
+
+                try {
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+                    let messagesForAPI = [];
+                    if (aiPersonality && conversationHistory.length > 0 && conversationHistory[0].role === "user") {
+                        let firstUserMessage = JSON.parse(JSON.stringify(conversationHistory[0]));
+                        firstUserMessage.parts[0].text = aiPersonality + "\n\n" + firstUserMessage.parts[0].text;
+                        messagesForAPI.push(firstUserMessage);
+                        for (let i = 1; i < conversationHistory.length; i++) {
+                            messagesForAPI.push(conversationHistory[i]);
+                        }
+                    } else {
+                        messagesForAPI = [...conversationHistory];
+                    }
+
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            contents: messagesForAPI
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorDetails = await response.text();
+                        console.error(`Erro da API Gemini com chave ${apiKey}:`, errorDetails);
+                        lastError = new Error(`Erro HTTP: ${response.status}. Detalhes: ${errorDetails.substring(0, 100)}...`);
+                        continue;
+                    }
+
+                    const data = await response.json();
+                    let resposta = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, a IA não gerou uma resposta válida.";
+
+                    conversationHistory.push({
+                        role: "model",
+                        parts: [{ text: resposta }]
+                    });
+                    saveConversationHistory();
+
+                    lastAIResponseText = resposta;
+                    aiResponseDisplay.classList.add('show');
+                    botaoFalar.style.display = 'block';
+                    botaoFalar.disabled = false;
+                    falarTexto(lastAIResponseText);
+                    successfulResponse = true;
+                    break;
+                } catch (error) {
+                    console.error(`Erro ao buscar resposta da IA com chave ${apiKey}:`, error);
+                    lastError = error;
+                    continue;
+                }
+            }
+
+            if (!successfulResponse) {
+                aiResponseDisplay.textContent = `Ocorreu um erro ao obter a resposta após tentar todas as chaves. Detalhe: ${lastError ? lastError.message : 'Nenhuma chave API funcionou.'}`;
+                aiResponseDisplay.classList.add('show');
+                mostrarMensagem('erro', `❌ Falha na comunicação com a API Gemini: ${lastError ? lastError.message : 'Todas as chaves API falharam.'}`);
+                desabilitarBotoes(false);
+                botaoFalar.style.display = 'none';
+                window.scrollTo(0, document.body.scrollHeight);
+
+                if (conversationHistory.length > 0 && conversationHistory[conversationHistory.length - 1].role === "user") {
+                    conversationHistory.pop();
+                    saveConversationHistory();
+                }
+            }
+
+            progressBar.classList.remove('active');
+        }
+
+        function falarTexto(textoParaFalar) {
+            let texto = textoParaFalar || lastAIResponseText;
+
+            if (texto === '') {
+                mostrarMensagem('erro', 'Nenhum texto para a IA falar.');
+                return;
+            }
+
+            const cleanedText = texto.replace(/[\*_`#]/g, '').replace(/\s+/g, ' ').trim();
+
+            if (synth.speaking) {
+                synth.cancel();
+            }
+
+            const utterance = new SpeechSynthesisUtterance(cleanedText);
+            utterance.lang = 'pt-BR';
+
+            const voice = availableVoices.find(v => v.voiceURI === selectedVoiceURI);
+            if (voice) {
+                utterance.voice = voice;
+            } else {
+                console.warn('Voz selecionada não encontrada, usando voz padrão.');
+            }
+
+            aiResponseDisplay.textContent = '';
+
+            utterance.onboundary = (event) => {
+                if (event.name === 'word') {
+                    const word = cleanedText.substring(event.charIndex, event.charIndex + event.charLength);
+                    if (aiResponseDisplay.textContent.length > 0 && aiResponseDisplay.textContent.slice(-1) !== ' ') {
+                        aiResponseDisplay.textContent += ' ';
+                    }
+                    aiResponseDisplay.textContent += word;
+                    window.scrollTo(0, document.body.scrollHeight);
+                }
+            };
+
+            utterance.onstart = () => {
+                if (audioContext && audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+                botaoFalar.innerHTML = '<i class="fas fa-pause"></i> Pausar Fala';
+                botaoFalar.style.backgroundColor = 'rgba(255, 193, 7, 0.2)';
+                botaoFalar.style.borderColor = '#ffc107';
+                desabilitarBotoes(true);
+                botaoAlternarTexto.disabled = true;
+                darkModeToggle.disabled = true;
+                waveCircle.classList.add('active');
+                equalizer.classList.add('active', 'speaking-animation');
+                aiResponseDisplay.classList.add('show');
+            };
+
+            utterance.onpause = () => {
+                botaoFalar.innerHTML = '<i class="fas fa-play"></i> Retomar Fala';
+                botaoFalar.style.backgroundColor = 'rgba(255, 193, 7, 0.1)';
+                botaoFalar.style.borderColor = '#ffc107';
+                waveCircle.classList.remove('active');
+                equalizer.classList.remove('active', 'speaking-animation');
+            };
+
+            utterance.onresume = () => {
+                botaoFalar.innerHTML = '<i class="fas fa-pause"></i> Pausar Fala';
+                botaoFalar.style.backgroundColor = 'rgba(255, 193, 7, 0.2)';
+                botaoFalar.style.borderColor = '#ffc107';
+                waveCircle.classList.add('active');
+                equalizer.classList.add('active', 'speaking-animation');
+            };
+
+            utterance.onend = () => {
+                botaoFalar.innerHTML = '<i class="fas fa-volume-up"></i> Fazer a IA Falar Resposta';
+                botaoFalar.style.backgroundColor = 'transparent';
+                botaoFalar.style.borderColor = '#60a5fa';
+                botaoFalar.disabled = false;
+                desabilitarBotoes(false);
+                botaoAlternarTexto.disabled = false;
+                darkModeToggle.disabled = false;
+                mostrarMensagem('sucesso', '✅ Fala da IA concluída.');
+                waveCircle.classList.remove('active');
+                equalizer.classList.remove('active', 'speaking-animation');
+                aiResponseDisplay.textContent = cleanedText;
+                window.scrollTo(0, document.body.scrollHeight);
+            };
+
+            utterance.onerror = (event) => {
+                console.error('Erro na fala:', event);
+                botaoFalar.innerHTML = '<i class="fas fa-volume-up"></i> Fazer a IA Falar Resposta';
+                botaoFalar.style.backgroundColor = 'transparent';
+                botaoFalar.style.borderColor = '#60a5fa';
+                botaoFalar.disabled = false;
+                desabilitarBotoes(false);
+                botaoAlternarTexto.disabled = false;
+                darkModeToggle.disabled = false;
+                mostrarMensagem('erro', `❌ Erro na fala nativa: ${event.error}.`);
+                waveCircle.classList.remove('active');
+                equalizer.classList.remove('active', 'speaking-animation');
+                aiResponseDisplay.textContent = cleanedText;
+                window.scrollTo(0, document.body.scrollHeight);
+            };
+
+            synth.speak(utterance);
+        }
+
+        function iniciarReconhecimento() {
+            if (!SpeechRecognition) {
+                mostrarMensagem('erro', '❌ API de Reconhecimento de Voz não é suportada neste navegador. Use Chrome ou Edge.');
+                desabilitarBotoes(true);
+                return;
+            }
+
+            if (isRecording) {
+                recognition.stop();
+                return;
+            }
+
+            if (synth.speaking) {
+                synth.cancel();
+                equalizer.classList.remove('active', 'speaking-animation');
+                waveCircle.classList.remove('active');
+            }
+
+            if (!recognition) {
+                recognition = new SpeechRecognition();
+                recognition.lang = 'pt-BR';
+                recognition.interimResults = false;
+                recognition.maxAlternatives = 1;
+
+                recognition.onresult = (event) => {
+                    const textoTranscritito = event.results[event.results.length - 1][0].transcript;
+                    textarea.value = textoTranscritito;
+                    obterRespostaDaIA(textoTranscritito);
+                };
+
+                recognition.onend = () => {
+                    isRecording = false;
+                    mainMicrophoneCircle.classList.remove('recording');
+                    desabilitarBotoes(false);
+                    stopMicrophoneVisualizer();
+                    if (isTextMode) {
+                        textarea.style.display = 'block';
+                        botaoEnviarTexto.style.display = 'block';
+                    } else {
+                        textarea.style.display = 'none';
+                        botaoEnviarTexto.style.display = 'none';
+                    }
+                };
+
+                recognition.onerror = (event) => {
+                    isRecording = false;
+                    mainMicrophoneCircle.classList.remove('recording');
+                    desabilitarBotoes(false);
+                    mostrarMensagem('erro', `❌ Erro na gravação: ${event.error}.`);
+                    stopMicrophoneVisualizer();
+                    if (isTextMode) {
+                        textarea.style.display = 'block';
+                        botaoEnviarTexto.style.display = 'block';
+                    }
+                };
+
+                recognition.onstart = () => {
+                    mostrarMensagem('alerta', '🎙️ Microfone ativo. Por favor, faça sua pergunta...');
+                    isRecording = true;
+                    mainMicrophoneCircle.classList.add('recording');
+                    desabilitarBotoes(true);
+                    mainMicrophoneCircle.style.pointerEvents = 'auto';
+                    mainMicrophoneCircle.style.opacity = '1';
+                    textarea.style.display = 'none';
+                    botaoEnviarTexto.style.display = 'none';
+                    botaoFalar.style.display = 'none';
+                    aiResponseDisplay.classList.remove('show');
+                    aiResponseDisplay.textContent = '';
+                    startMicrophoneVisualizer();
+                };
+            }
+
+            try {
+                recognition.start();
+            } catch (e) {
+                console.error(e);
+                mostrarMensagem('erro', 'Ocorreu um erro ao tentar iniciar o microfone.');
+                desabilitarBotoes(false);
+                stopMicrophoneVisualizer();
+            }
+        }
+
+        mainMicrophoneCircle.addEventListener('click', iniciarReconhecimento);
+
+        botaoAlternarTexto.addEventListener('click', () => {
+            isTextMode = !isTextMode;
+            if (isTextMode) {
+                textarea.style.display = 'block';
+                botaoEnviarTexto.style.display = 'block';
+                botaoAlternarTexto.innerHTML = '<i class="fas fa-microphone"></i> Voz';
+                mostrarMensagem('alerta', 'Modo de texto ativado. Digite sua pergunta.');
+                botaoFalar.style.display = 'none';
+                textarea.value = '';
+                aiResponseDisplay.classList.remove('show');
+                aiResponseDisplay.textContent = '';
+            } else {
+                textarea.style.display = 'none';
+                botaoEnviarTexto.style.display = 'none';
+                botaoFalar.style.display = 'none';
+                botaoAlternarTexto.innerHTML = '<i class="fas fa-pencil-alt"></i> Texto';
+                mostrarMensagem('alerta', 'Modo de voz ativado. Clique no microfone principal.');
+                textarea.value = '';
+                aiResponseDisplay.classList.remove('show');
+                aiResponseDisplay.textContent = '';
+            }
+            desabilitarBotoes(false);
+            stopMicrophoneVisualizer();
+            if (synth.speaking) {
+                synth.cancel();
+                equalizer.classList.remove('active', 'speaking-animation');
+                waveCircle.classList.remove('active');
+            }
+        });
+
+        botaoEnviarTexto.addEventListener('click', () => {
+            const pergunta = textarea.value.trim();
+            if (pergunta) {
+                obterRespostaDaIA(pergunta);
+                textarea.value = '';
+            } else {
+                mostrarMensagem('erro', 'Por favor, digite uma pergunta antes de enviar.');
+            }
+        });
+
+        botaoFalar.addEventListener('click', () => {
+             if (synth.speaking) {
+                if (synth.paused) {
+                    synth.resume();
+                } else {
+                    synth.pause();
+                }
+            } else {
+                falarTexto(lastAIResponseText);
+            }
+        });
+
+        settingsButton.addEventListener('click', openSettingsModal);
+        closeSettingsButton.addEventListener('click', closeSettingsModal);
+        saveSettingsButton.addEventListener('click', saveSettings);
+        clearHistoryButton.addEventListener('click', clearConversationHistory);
+
+        predefinedPersonalitySelect.addEventListener('change', () => {
+            if (predefinedPersonalitySelect.value) {
+                personalityInput.value = '';
+                personalityInput.disabled = true;
+            } else {
+                personalityInput.disabled = false;
+            }
+        });
+
+        personalityInput.addEventListener('input', () => {
+            if (personalityInput.value.trim()) {
+                predefinedPersonalitySelect.value = '';
+            }
+        });
+
+        darkModeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('light-mode');
+            const isLightMode = document.body.classList.contains('light-mode');
+            localStorage.setItem('isLightMode', isLightMode);
+
+            if (isLightMode) {
+                darkModeToggle.innerHTML = '<i class="fas fa-moon"></i> Dark Mode';
+            } else {
+                darkModeToggle.innerHTML = '<i class="fas fa-sun"></i> Light Mode';
+            }
+        });
+
+        window.onload = () => {
+            desabilitarBotoes(false);
+            textarea.style.display = 'none';
+            botaoEnviarTexto.style.display = 'none';
+            botaoFalar.style.display = 'none';
+            aiResponseDisplay.classList.remove('show');
+            aiResponseDisplay.textContent = '';
+            mostrarMensagem('alerta', 'Aperte No Microfone Para conversar Por voz com a IA, ou clique em "texto" para conversar com texto com a IA respondendo por voz!.');
+            equalizer.classList.remove('active', 'speaking-animation');
+            waveCircle.classList.remove('active');
+
+            loadSettings();
+            loadConversationHistory();
+
+            if (synth.onvoiceschanged !== undefined) {
+                synth.onvoiceschanged = populateVoiceList;
+            } else {
+                populateVoiceList();
+            }
+
+            // Dark mode initialization
+            const isLightModeSaved = localStorage.getItem('isLightMode');
+            if (isLightModeSaved === 'true') {
+                document.body.classList.add('light-mode');
+                darkModeToggle.innerHTML = '<i class="fas fa-moon"></i> Dark Mode';
+            } else {
+                darkModeToggle.innerHTML = '<i class="fas fa-sun"></i> Light Mode';
+            }
+        };
+    </script>
+</body>
+</html>
